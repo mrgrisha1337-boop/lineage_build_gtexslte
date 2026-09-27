@@ -48,13 +48,12 @@ jobs:
         run: |
           cd ~/android/lineage
           mkdir -p .repo/local_manifests
-          # Создаем манифест для SM-T285 (gtexslte)
           cat <<EOF > .repo/local_manifests/gtexslte.xml
           <?xml version="1.0" encoding="UTF-8"?>
           <manifest>
-            <!-- Укажи здесь правильные репозитории дерева устройств, ядра и вендора под SM-T285 -->
-            <!-- Пример: -->
-            <!-- <project path="device/samsung/gtexslte" name="пользователь/android_device_samsung_gtexslte" remote="github" revision="lineage-15.1" /> -->
+            <project path="device/samsung/gtexslte" name="ask93/android_device_samsung_gtexslte" remote="github" revision="lineage-15.1" />
+            <project path="vendor/samsung/gtexslte" name="ask93/android_vendor_samsung_gtexslte" remote="github" revision="lineage-15.1" />
+            <project path="kernel/samsung/gtexslte" name="ask93/android_kernel_samsung_gtexslte" remote="github" revision="lineage-15.1" />
           </manifest>
           EOF
 
@@ -75,4 +74,5 @@ jobs:
         with:
           name: LineageOS_gtexslte_Build
           path: ~/android/lineage/out/target/product/gtexslte/*.zip
+
 
