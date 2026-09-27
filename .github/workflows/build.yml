@@ -10,11 +10,19 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Freeing up Disk Space
-        run: |
-          sudo rm -rf /usr/share/dotnet /etc/apt/sources.list.d/* /usr/local/lib/android
-          sudo apt-get clean
-          df -h
+      - name: Maximize Build Space
+        uses: easimon/maximize-build-space@v8
+        with:
+          root-reserve-mb: 2048
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+
+      - name: Check Disk Space
+        run: df -h
 
       - name: Install Dependencies
         run: |
@@ -28,22 +36,43 @@ jobs:
           chmod a+rx ~/.bin/repo
           echo "$HOME/.bin" >> $GITHUB_PATH
 
-      - name: Initialize & Sync LineageOS
+      - name: Initialize LineageOS
         run: |
           mkdir -p ~/android/lineage
           cd ~/android/lineage
+          git config --global user.name "BuildBot"
+          git config --global user.email "build@local.host"
           repo init -u https://github.com/LineageOS/android.git -b lineage-15.1 --git-lfs --depth=1
-          repo sync -c -j$(nproc) --force-sync --no-clone-bundle --no-tags
+
+      - name: Add Local Manifests (Device Trees)
+        run: |
+          cd ~/android/lineage
+          mkdir -p .repo/local_manifests
+          # Создаем манифест для SM-T285 (gtexslte)
+          cat <<EOF > .repo/local_manifests/gtexslte.xml
+          <?xml version="1.0" encoding="UTF-8"?>
+          <manifest>
+            <!-- Укажи здесь правильные репозитории дерева устройств, ядра и вендора под SM-T285 -->
+            <!-- Пример: -->
+            <!-- <project path="device/samsung/gtexslte" name="пользователь/android_device_samsung_gtexslte" remote="github" revision="lineage-15.1" /> -->
+          </manifest>
+          EOF
+
+      - name: Sync Sources
+        run: |
+          cd ~/android/lineage
+          repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
 
       - name: Build Firmware
         run: |
           cd ~/android/lineage
           source build/envsetup.sh
-          lunch lineage_gtexslte-userdebug || true
-          mka bacon -j$(nproc) || true
+          lunch lineage_gtexslte-userdebug
+          mka bacon -j$(nproc --all)
 
       - name: Upload Output Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: LineageOS_gtexslte_Build
           path: ~/android/lineage/out/target/product/gtexslte/*.zip
+
